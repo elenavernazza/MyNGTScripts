@@ -7,20 +7,20 @@ import mplhep as hep
 plt.style.use(hep.style.CMS)
 
 files0 = ['/data/evernazz/2025_06_12/CMSSW_15_1_X_2025-06-11-2300/src/TestGenJets/Phase2_Scouting_HLT_inNANOAODSIM.root']
-dataframe_files = ROOT.vector(str)()
+dataframe_files0 = ROOT.vector(str)()
 for f in files0:
     file = ROOT.TFile.Open(f)
     if file.Get("Events"):
-        dataframe_files.push_back(f)
-df0 = ROOT.RDataFrame("Events", dataframe_files)
+        dataframe_files0.push_back(f)
+df0 = ROOT.RDataFrame("Events", dataframe_files0)
 
 files1 = ['/data/evernazz/2025_06_12/CMSSW_15_1_0_pre3/src/TestCAExtension/Phase2_Scouting_HLT_inNANOAODSIM.root']
-dataframe_files = ROOT.vector(str)()
+dataframe_files1 = ROOT.vector(str)()
 for f in files1:
     file = ROOT.TFile.Open(f)
     if file.Get("Events"):
-        dataframe_files.push_back(f)
-df1 = ROOT.RDataFrame("Events", dataframe_files)
+        dataframe_files1.push_back(f)
+df1 = ROOT.RDataFrame("Events", dataframe_files1)
 
 output_dir = "Plots_TrackResolution/Test_0"
 os.system(f"mkdir -p {output_dir}")
@@ -78,7 +78,7 @@ ROOT.gInterpreter.Declare("""
     using Vfloat = const ROOT::RVec<float>&;
     using Vint   = const ROOT::RVec<int>&;
     
-    ROOT::RVec<float> get_matched_pixel_track_pts(Vfloat hltPixelTrack_var, Vfloat matched_pixel_tracks_indeces) {
+    ROOT::RVec<float> get_matched_pixel_track_pts(Vfloat hltPixelTrack_var, Vint matched_pixel_tracks_indeces) {
         ROOT::RVec<float> matched_hltPixelTrack_var;
         for (size_t i_gen_track = 0; i_gen_track < matched_pixel_tracks_indeces.size(); i_gen_track ++) {
             int i_pixel_track = matched_pixel_tracks_indeces[i_gen_track];
@@ -97,20 +97,22 @@ df0 = df0.Define("matched_pixel_tracks_mask", "(matched_pixel_tracks_indeces != 
 df0 = df0.Define("matched_hltPixelTrack_pt", "get_matched_pixel_track_pts(hltPixelTrack_pt, matched_pixel_tracks_indeces)[matched_pixel_tracks_mask]")
 df0 = df0.Define("matched_hltPixelTrack_eta", "get_matched_pixel_track_pts(hltPixelTrack_eta, matched_pixel_tracks_indeces)[matched_pixel_tracks_mask]")
 df0 = df0.Define("matched_hltPixelTrack_phi", "get_matched_pixel_track_pts(hltPixelTrack_phi, matched_pixel_tracks_indeces)[matched_pixel_tracks_mask]")
-df0 = df0.Define("res_pixel_vs_gen_pt", "matched_hltPixelTrack_pt/hltGeneralTrack_pt")
+df0 = df0.Define("matched_hltGeneralTrack_pt", "hltGeneralTrack_pt[matched_pixel_tracks_mask]")
+df0 = df0.Define("res_pixel_vs_gen_pt", "matched_hltPixelTrack_pt/matched_hltGeneralTrack_pt")
 
 df1 = df1.Define("matched_pixel_tracks_mask", "(matched_pixel_tracks_indeces != -1)")
 df1 = df1.Define("matched_hltPixelTrack_pt", "get_matched_pixel_track_pts(hltPixelTrack_pt, matched_pixel_tracks_indeces)[matched_pixel_tracks_mask]")
 df1 = df1.Define("matched_hltPixelTrack_eta", "get_matched_pixel_track_pts(hltPixelTrack_eta, matched_pixel_tracks_indeces)[matched_pixel_tracks_mask]")
 df1 = df1.Define("matched_hltPixelTrack_phi", "get_matched_pixel_track_pts(hltPixelTrack_phi, matched_pixel_tracks_indeces)[matched_pixel_tracks_mask]")
-df1 = df1.Define("res_pixel_vs_gen_pt", "matched_hltPixelTrack_pt/hltGeneralTrack_pt")
+df1 = df1.Define("matched_hltGeneralTrack_pt", "hltGeneralTrack_pt[matched_pixel_tracks_mask]")
+df1 = df1.Define("res_pixel_vs_gen_pt", "matched_hltPixelTrack_pt/matched_hltGeneralTrack_pt")
 
 ### Debug
 # print(df1.AsNumpy(["res_pixel_vs_gen_pt"]))
 
 TH1D_Res = ROOT.RDF.TH1DModel("h", "", 50, 0.0, 2.5)
 
-h_pt0 = df1.Histo1D(TH1D_Res, "res_pixel_vs_gen_pt")
+h_pt0 = df0.Histo1D(TH1D_Res, "res_pixel_vs_gen_pt")
 c_pt0 = np.array([h_pt0.GetBinContent(i) for i in range(1, h_pt0.GetNbinsX()+1)])
 e_pt0 = np.array([h_pt0.GetBinLowEdge(i) for i in range(1, h_pt0.GetNbinsX()+2)])
 
